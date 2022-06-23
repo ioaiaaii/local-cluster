@@ -1,0 +1,11 @@
+redis:
+  enabled:
+    false
+server:
+  extraArgs:
+  - --insecure
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - argocd.cluster.localnet
