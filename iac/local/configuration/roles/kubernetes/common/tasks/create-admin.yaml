@@ -1,0 +1,15 @@
+  - name: Determine available groups
+    getent:
+      database: group
+
+  - name: Create admin user
+    user:
+      name: admin
+      groups:
+      - sudo
+      state: present
+      shell: /bin/bash
+      system: yes
+    when: item not in ansible_facts.getent_group
+    with_items: 
+        - admin

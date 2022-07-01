@@ -1,0 +1,9 @@
+# Kubeadm config
+apiserver_advertise_address: "{{ first_master_node_ip_address }}"
+apiserver_hostname: "{{ apiserver_hostname }}"
+service_cidr: "10.96.0.0/12"
+pod_network_cidr: "10.217.0.0/16"
+kubernetes_version: 1.24.0
+
+# Kubeadm
+kubeadm_opts: ""

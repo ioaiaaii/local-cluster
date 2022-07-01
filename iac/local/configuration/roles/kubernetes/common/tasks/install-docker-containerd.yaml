@@ -1,0 +1,62 @@
+  - name: Add an apt signing key for Docker
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: Add apt repository for stable version
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
+      state: present
+
+  - name: Install docker and containerd
+    apt: 
+      name: "{{ packages }}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+      - docker-ce 
+      - docker-ce-cli 
+      - containerd.io
+    notify:
+      - docker status
+
+  - name: Creating /etc/docker/daemon.json file with optimal configs
+    copy:
+      dest: "/etc/docker/daemon.json"
+      content: |
+        {
+          "exec-opts": ["native.cgroupdriver=systemd"],
+          "log-driver": "json-file",
+          "log-opts": {
+            "max-size": "100m"
+          },
+          "storage-driver": "overlay2"
+        }
+
+  - name: Ensure group "docker" exists
+    group:
+      name: docker
+      state: present
+  
+  - name: Add the user 'admin' with to group of 'docker'
+    user:
+      name: admin
+      group: admin
+      groups: docker
+      append: yes
+    when: item not in ansible_facts.getent_group
+    with_items: 
+        - docker
+
+  - name: Enable and Start Docker service
+    service:
+      name: docker
+      enabled: yes
+      state: started
+
+  - name: Enable and Start Containerd
+    service:
+      name: containerd
+      enabled: yes
+      state: started

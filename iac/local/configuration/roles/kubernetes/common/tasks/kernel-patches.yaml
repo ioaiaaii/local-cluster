@@ -1,0 +1,23 @@
+- name: Load bridge network filter and overlay modprobe module for CRI-O
+  modprobe:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - br_netfilter
+    - overlay
+
+- name: Enable kernel modules
+  copy:
+    content: "{{item.kernel_module}}"
+    dest: "/etc/modules-load.d/{{item.name}}.conf"
+  with_items:
+  - { name: 'br_netfilter', kernel_module: 'br_netfilter' }
+  - { name: 'overlay', kernel_module: 'overlay' }
+
+- name: Update sysctl parameters
+  sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    state: present
+    reload: yes
+  with_dict: '{{ sysctl_config }}'

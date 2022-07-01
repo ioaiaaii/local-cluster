@@ -1,0 +1,9 @@
+- name: Check if installation is already done
+  stat:
+    path: "/etc/kubernetes/pki/ca.crt"
+  register: kubeadm_ca_crt
+
+- name: Join worker
+  include_tasks: join.yaml
+  when: not kubeadm_ca_crt.stat.exists
+  register: cluster_ready

@@ -1,0 +1,51 @@
+- name: Check if installation is already done
+  stat:
+    path: "/etc/kubernetes/pki/ca.key"
+  register: kubeadm_ca_key
+
+#https://github.com/containerd/containerd/issues/4581
+- name: Reset Containerd Config
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+  - /etc/containerd/config.toml
+  register: reset_containerd
+
+- name: restart containerd
+  service:
+    name: containerd
+    state: restarted
+  register: restart_containerd
+
+- name: Reset Kubernetes Component
+  when: restart_containerd is succeeded
+  shell: "kubeadm reset --force"
+  register: reset_cluster
+
+- name: Initialize the Kubernetes cluster using kubeadm
+  when: reset_cluster is succeeded
+  shell: |
+    kubeadm init --apiserver-advertise-address {{ apiserver_advertise_address }} \
+                 --apiserver-cert-extra-sans {{ apiserver_advertise_address }} \
+                 --kubernetes-version {{ kubernetes_version }} \
+                 --node-name {{ apiserver_hostname }} \
+                 --pod-network-cidr {{ pod_network_cidr }} \
+                 --cri-socket unix:///var/run/containerd/containerd.sock \  
+                 --skip-phases=addon/kube-proxy              
+  register: init_cluster
+  
+- name: containerd patch
+  shell: |
+    containerd config default > /etc/containerd/config.toml && \
+    sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml && \
+    service containerd restart && \
+    service kubelet restart
+
+- name: Wait for Kubernetes API to be ready
+  wait_for:
+    port: 6443
+    host: "{{ apiserver_advertise_address }}"
+    connect_timeout: 3
+    delay: 10
+    timeout: 400

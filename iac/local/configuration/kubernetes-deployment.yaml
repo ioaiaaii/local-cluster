@@ -1,0 +1,31 @@
+- name: Init Kubernetes Nodes
+  hosts:
+    - all
+  gather_facts: true
+  become: true
+  roles:
+    - { role: kubernetes/common, tags: common }
+
+- name: Prepare Kubernetes Master Nodes
+  hosts:
+    - masters
+  gather_facts: true
+  become: true
+  roles:
+    - { role: kubernetes/master, tags: master }
+
+- name: Prepare Kubernetes Worker Nodes
+  hosts:
+    - workers
+  gather_facts: true
+  become: true
+  roles:
+    - { role: kubernetes/worker, tags: worker }
+
+- name: Finilize Cluster with CNI,LB,Ingress and GitOpss
+  hosts:
+    - masters
+  gather_facts: true
+  become: true
+  roles:
+    - { role: kubernetes/meta, tags: master }

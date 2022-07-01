@@ -1,0 +1,24 @@
+- name: Add Argo Helm repo
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: https://argoproj.github.io/argo-helm
+
+- name: Install Argo-CD
+  kubernetes.core.helm:
+    name: argo-cd
+    chart_ref: argo/argo-cd
+    chart_version: 5.5.22
+    create_namespace: yes
+    release_namespace: argo-cd
+    release_values: "{{ argo_cd_helm_values }}"
+    update_repo_cache: true
+    wait: true
+
+- name: Install ArgoCD-Applications
+  kubernetes.core.helm:
+    name: argocd-apps
+    chart_ref: argo/argocd-apps
+    chart_version: 0.0.1
+    release_namespace: argo-cd
+    release_values: "{{ argocd_apps_helm_values }}"
+    wait: true

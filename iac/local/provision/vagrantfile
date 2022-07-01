@@ -1,0 +1,59 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+VAGRANTFILE_API_VERSION = "2"
+
+#Cluster
+cluster = {
+  "master" => { :count => 1, :cpus => 2, :mem => 2048 },
+  "worker" => { :count => 2, :cpus => 5, :mem => 3096 }
+}
+
+#OS
+IMAGE_NAME = "bento/ubuntu"
+IMAGE_TAG = "22.04"
+IMAGE = IMAGE_NAME + "-" + IMAGE_TAG
+
+#Network
+SUBNET="192.168.51."
+DOMAIN_NAME="ioaiaaii.localnet"
+METALLB="192.168.51.20"
+
+#Kubernetes
+POD_NETWORK_CIDR="10.244.0.0/16"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+    config.vm.box = IMAGE
+    config.ssh.username = "vagrant"
+    config.ssh.password = "vagrant"
+    config.ssh.insert_key = true
+
+    cluster.each_with_index do |(type, info), index|
+
+        (1..info[:count]).each do |i|
+            config.vm.define "#{type}-0#{i}" do |cfg|
+                cfg.vm.provider :virtualbox do |vb, override|
+                    HOSTNET="1#{index + i}"
+                    override.vm.network "private_network", bridge: "bridge0",ip: "#{SUBNET}#{HOSTNET}"
+                    #override.vm.network "private_network", ip: "#{SUBNET}#{HOSTNET}"
+                    override.vm.hostname = "#{type}-0#{i}"
+                    vb.name = "#{type}-0#{i}"
+                    vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus]]
+                end
+
+                if index == cluster.size - 1 && i == 2
+                    cfg.vm.provision "ansible" do |ansible|
+                        ansible.playbook = "../configuration/kubernetes-deployment.yaml"
+                        ansible.limit = "all"
+                        ansible.groups = {
+                          "masters" => ["master-01"],
+                          "workers" => ["worker-01","worker-02"],
+                          "all:children" => ["masters", "workers"],
+                          "all:vars" => {"domain_name" => DOMAIN_NAME,
+                                         "metal_lb_ip" => METALLB}
+                        }
+                    end
+                end
+            end
+        end
+    end
+end

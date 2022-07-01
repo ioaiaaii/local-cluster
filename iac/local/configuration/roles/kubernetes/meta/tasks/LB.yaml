@@ -1,0 +1,27 @@
+- name: Add bitnmani Helm repo
+  kubernetes.core.helm_repository:
+    name: bitnmani
+    repo_url: https://charts.bitnami.com/bitnami
+
+- name: Install MetalLB
+  kubernetes.core.helm:
+    name: metallb
+    chart_ref: bitnmani/metallb
+    chart_version: "{{ metallb_release }}"
+    create_namespace: yes
+    release_namespace: metal-lb
+    update_repo_cache: true
+
+- name: Pause for 5 minutes to build app MetalLB
+  ansible.builtin.pause:
+    minutes: 5
+
+- name: Upgrade MetalLB
+  kubernetes.core.helm:
+    name: metallb
+    chart_ref: bitnmani/metallb
+    chart_version: "{{ metallb_release }}"
+    create_namespace: yes
+    release_namespace: metal-lb
+    release_values: "{{ metallb_helm_values }}"
+

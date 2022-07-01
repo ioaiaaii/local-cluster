@@ -1,0 +1,2 @@
+first_master_node_ip_address: "{{ hostvars[groups['masters'][0]]['ansible_eth1']['ipv4']['address'] | default(groups['masters'][0]) }}"
+apiserver_hostname: "{{ hostvars[groups['masters'][0]]['ansible_hostname'] | default(groups['masters'][0]) }}"

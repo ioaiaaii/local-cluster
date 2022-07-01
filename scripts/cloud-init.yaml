@@ -30,8 +30,6 @@ runcmd:
  - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
  - apt-get update -y 
  - apt-get install -y docker-ce docker-ce-cli containerd.io kubectl terraform
-
  - sysctl --system
-
 
 final_message: "The system is finally up, after $UPTIME seconds"

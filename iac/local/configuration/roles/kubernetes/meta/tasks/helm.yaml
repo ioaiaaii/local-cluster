@@ -1,0 +1,15 @@
+- name: Check helm bin
+  stat:
+    path: /usr/local/bin/helm
+  register: register_helm
+
+- name: Download and extract Helm
+  unarchive:
+    src: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+    dest: /usr/local/bin
+    extra_opts:
+      - --strip=1
+      - --wildcards
+      - '*/helm'
+    remote_src: True
+  when: not register_helm.stat.exists

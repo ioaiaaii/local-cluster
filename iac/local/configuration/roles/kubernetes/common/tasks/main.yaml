@@ -1,0 +1,35 @@
+---
+  - name: Disable swap
+    include_tasks: swap-off.yaml
+    tags:
+      - common
+
+  - name: Create admin
+    include_tasks: create-admin.yaml
+    tags:
+      - common
+
+  - name: Update /etc/hosts
+    include_tasks: update-hosts.yaml
+    tags:
+      - common
+
+  - name: Kernel Patches
+    include_tasks: kernel-patches.yaml
+    tags:
+      - common
+
+  - name: Install Docker/Containerd Bins
+    include_tasks: install-docker-containerd.yaml
+    tags:
+      - common
+
+  - name: Install Kubernetes Bins
+    include_tasks: install-kubernetes.yaml
+    tags:
+      - common
+
+  # - name: Install CRI-O
+  #   include_tasks: install-CRI-O.yaml
+  #   tags:
+  #     - common

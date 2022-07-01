@@ -1,0 +1,156 @@
+cilium_helm_base_opts:
+  externalIPs:
+    enabled: true
+  hostPort:
+    enabled: true
+  image:
+    pullPolicy: IfNotPresent
+  ipam:
+    mode: kubernetes
+  k8sServiceHost: "{{ hostvars[groups['masters'][0]]['ansible_eth1']['ipv4']['address'] | default(groups['masters'][0]) }}"
+  k8sServicePort: 6443
+  kubeProxyReplacement: strict
+  loadBalancer:
+    algorithm: maglev
+  nodeinit:
+    enabled: true
+  nodePort:
+    enabled: true
+  operator:
+    replicas: 1
+
+# Set extra Helm chart options when Hubble is enabled
+cilium_helm_hubble_opts:
+  hubble:
+    enabled: true 
+    metrics:
+      enabled:
+        - dns
+        - drop
+        - tcp
+        - flow
+        - port-distribution
+        - icmp
+        - http
+    listenAddress: ":4244"
+    relay:
+      enabled: true
+    ui:
+      enabled: true
+
+# Create a dict cilium_helm_values which combines cilium_helm_base_opts and
+# cilium_helm_hubble_opts when install_hubble is set to True and only use
+# cilium_helm_base_opts when install_hubble is set to False
+cilium_helm_values: "{{ (install_hubble) | ternary(cilium_helm_base_opts | combine(cilium_helm_hubble_opts), cilium_helm_base_opts) }}"
+
+metallb_helm_values:
+  extraDeploy: 
+  - |
+    apiVersion: metallb.io/v1beta1
+    kind: IPAddressPool
+    metadata:
+      name: first-pool
+      namespace: metal-lb
+    spec:
+      addresses:
+      - 192.168.51.20/32
+  - |
+    apiVersion: metallb.io/v1beta1
+    kind: L2Advertisement
+    metadata:
+      name: l2advertisement
+      namespace: metal-lb
+    spec:
+      ipAddressPools:
+      - first-pool
+
+ingress_nginx_helm_values:
+controller:
+  kind: DaemonSet
+  hostNetwork: true
+  setAsDefaultIngress: true
+
+
+argo_cd_helm_values:
+  configs:
+    repositories:
+      local-cluster-repo:
+        name: local-cluster
+        type: git
+        url: https://github.com/ioaiaaii/local-cluster.git
+      argo-helm-repo:
+        name: argo-helm
+        type: helm
+        url: https://argoproj.github.io/argo-helm
+      prometheus-community-repo:
+        name: prometheus-community
+        type: git
+        url: https://github.com/prometheus-community/helm-charts.git
+    params:
+      controller.repo.server.timeout.seconds: 420
+      server.insecure: true
+  dex:
+    enabled: false
+  server:
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+        - argocd.cluster.localnet
+
+argocd_apps_helm_values:
+  applications:
+    - name: observability
+      namespace: argo-cd
+      destination:
+        namespace: argo-cd
+        server: https://kubernetes.default.svc
+      project: argocd
+      source:
+        path: gitops/observability
+        repoURL: https://github.com/ioaiaaii/local-cluster.git
+        targetRevision: HEAD
+        directory:
+          recurse: true
+          jsonnet: {}
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: true
+    - name: infrastructure
+      namespace: argo-cd
+      destination:
+        namespace: argo-cd
+        server: https://kubernetes.default.svc
+      project: argocd
+      source:
+        path: gitops/infrastructure
+        repoURL: https://github.com/ioaiaaii/local-cluster.git
+        targetRevision: HEAD
+        directory:
+          recurse: true
+          jsonnet: {}
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: true
+  projects:
+  - name: argocd
+    namespace: argo-cd
+    additionalLabels: {}
+    additionalAnnotations:
+      "helm.sh/resource-policy": keep
+    finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    description: Argocd Project
+    sourceRepos:
+    - '*'
+    destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+    clusterResourceWhitelist:
+      - group: '*'
+        kind: '*'
+    namespaceResourceWhitelist:
+      - group: '*'
+        kind: '*'

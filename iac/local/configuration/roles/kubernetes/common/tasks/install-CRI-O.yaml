@@ -1,0 +1,82 @@
+# - name: Add apt repository for backports
+#   apt_repository:
+#     repo: deb http://deb.debian.org/debian buster-backports main
+#     state: present
+#     filename: backports.list
+
+
+- name: Add an apt signing key for libcontainers
+  apt_key:
+    url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key
+    state: present
+
+- name: Add an apt signing key for cri-o
+  apt_key:
+    url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/xUbuntu_20.04/Release.key
+    state: present
+
+- name: Add libcontainers repo
+  apt_repository:
+    repo: "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/ /"
+    state: present
+    filename: devel:kubic:libcontainers:stable.list
+
+- name: Add libcontainers repo
+  apt_repository:
+    repo: "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/xUbuntu_20.04/ /"
+    state: present
+    filename: devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.list
+
+# - name: download the libcontainers apt key
+#   get_url:
+#     url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/Release.key
+#     dest: /usr/share/keyrings/libcontainers-archive-keyring.key
+
+# - name: download the cri-o apt key
+#   get_url:
+#     url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.24/xUbuntu_22.04/Release.key
+#     dest: /usr/share/keyrings/libcontainers-crio-archive-keyring.key
+
+# - name: Add libcontainers repo
+#   apt_repository:
+#     repo: "deb [signed-by=/usr/share/keyrings/libcontainers-archive-keyring.key] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/ /"
+#     state: present
+#     filename: devel:kubic:libcontainers:stable.list
+
+# - name: Add libcontainers repo
+#   apt_repository:
+#     repo: "deb [signed-by=/usr/share/keyrings/libcontainers-crio-archive-keyring.key] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.24/xUbuntu_22.04/ /"
+#     state: present
+#     filename: devel:kubic:libcontainers:stable:cri-o:1.24.list
+
+- name: Install cri-o requirements
+  apt: 
+    name: "{{ packages }}"
+    state: present
+    update_cache: yes
+  vars:
+    packages:
+    # - buster-backports
+    # - libseccomp2
+    - cri-o
+    - cri-o-runc
+  # notify:
+    # - docker status
+
+- name: Configure /var/lib/kubelet
+  copy:
+    content: "KUBELET_EXTRA_ARGS=--runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice --cgroup-driver=systemd\n"
+    dest: /var/lib/kubelet/config.yaml
+  notify: restart kubelet
+
+- name: Configure /etc/crictl.yaml
+  copy:
+    content: "runtime-endpoint: unix:///var/run/crio/crio.sock\ncgroup-manager: systemd\n"
+    dest: /etc/crictl.yaml
+  notify: restart crio
+
+- name: Service CRI-O
+  service:
+    name: crio
+    state: started
+    enabled: true

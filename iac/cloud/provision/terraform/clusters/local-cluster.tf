@@ -8,14 +8,14 @@ module "nginx-ingress" {
   kind_cluster_config_path = module.kind_cluster.kubeconfig_path
 }
 
-#module "kube-prometheus-stack" {
+# module "kube-prometheus-stack" {
 #  source = "../modules/system-services/kube-prometheus-stack"
 #  kind_cluster_config_path = module.kind_cluster.kubeconfig_path
 #  dependency_var = module.nginx-ingress.release_status
-#}
-
-# module "argo-cd" {
-#   source = "../modules/system-services/argo-cd"
-#   kind_cluster_config_path = module.kind_cluster.kubeconfig_path
-#   dependency_var = module.kube-prometheus-stack.release_status
 # }
+
+module "argo-cd" {
+  source = "../modules/system-services/argo-cd"
+  kind_cluster_config_path = module.kind_cluster.kubeconfig_path
+  dependency_var = module.nginx-ingress.release_status
+}

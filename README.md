@@ -19,23 +19,57 @@ The goal of this project is to provide a simulation of a production cluster in a
   - Alerting
   - Reporting and SLIs/SLOs
 
-There are plenty of impressive and quick solutions to spin up a new local cluster and test a workload. In this implementation, I wanted to split the layers within a topology, as close as possible to a production environment, from Infra to Service. Also, it is a project just for fun, experience, and my workstation that I wanted to describe as a code.
+There are plenty of impressive and quick solutions to spin up a new local cluster and test a workload. In this implementation, I wanted to split the layers within a topology, as close as possible to a production environment, from Infra to Service. Also, it is a project for fun, learn, gain experience, and describe my workstation as a code.
 
 ## Topology
 
+### Monorepo Structure
+
+```shell
+├── gitops              #Directory for argo cd applications
+│   ├── infrastructure
+│   │   └──             #argo applications for infra deployments
+│   ├── observability
+│   │   └──             #argo applications for observability deployments
+│   └── products
+│       └──             #argo applications for product deployments
+├── iac                 #Directory for IAC manifests
+│   ├── cloud           #Declarative infra at Cloud
+│   │   ├── configuration
+│   │   └── provision
+│   └── local           #Imperative infra at local workstation
+│       ├── configuration #Configure with Ansible
+│       └── provision   #Provision with Vagrant and Virtualbox
+├── meta-charts         #Meta helm charts, used by Argo GitOps applications
+│   └── 
+└── scripts             #Path for scripts
+```
+
+### Infrastructure
+
+#### local
+
+![local](docs/files/local-cluster.drawio.png)
+
+#### Workflow
+
 ```yaml
-Local workstation >
+Local Workstation ->
 # Spin up infra
-                  Multipass
-                  # Init and configure VM
-                  # Exec IAC
-                            > Ubuntu VM
-                            > Terraform
+                  Vagrant ->
+                  # Spawn VMs
+                  # Configure VMs with Ansible
+                            VMs -> 
                             # Spin up Kubernetes
-                                          > KinD
-                                          # GitOps
-                                                > Helm
-                                                      > Workload
+                                Ansible -> 
+                                  # Setup Cluster
+                                          Kubernetes: Kubeadm
+                                          CRI: Containerd
+                                          CNI: Cilium
+                                          LB: MetalLB
+                                          Ingress: NGINX
+                                          GitOps: ArgoCD
+
 ```
 
 ## Getting Started
@@ -44,78 +78,71 @@ Local workstation >
 
 This project requires the following softwares:
 
-- [Multipass](https://multipass.run) - Quick VM Orchestrator
-- [VirtualBox](https://www.virtualbox.org) - Reliable virtualization backend for Multipass
-- dnsmasq (optional)
+- [VirtualBox](https://www.virtualbox.org)
+- [Vagrant](https://www.vagrantup.com)
+- [Ansible](https://www.ansible.com)
 
-### Configuration
+### Quick install for OSX
 
-#### Local domain resolver
-
-Utilizing dnsmasq, the local system should be configured to resolve FQDNs from the local cluster;s ingresses, by following a really good read [Local Ingress Domains for your Kind Cluster](https://mjpitz.com/blog/2020/10/21/local-ingress-domains-kind/). In this way, you can set any ingress using a specified local domain, and the ingress can be resolved out of the box inside the local workstation.
-
-Note: 
-*Configuration following in the next section*
-
-### Tooling and Configuration Steps
-
-Instead of writing a script, which could harm your local workstation packages/versions, some example commands are given for a quick start: [requirements.sh](scripts/requirements.sh)
+```shell
+brew install --cask vagrant
+brew install --cask virtualbox
+brew install ansible
+```
 
 ## Usage
 
-### Create a local Kubernetes Cluster
-
-The following steps will provide a fresh KIND cluster with:
-
-- [NGINX Ingress controller](https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx)
-- [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack#kube-prometheus-stack)
+### Get available commands
 
 ```shell
-terraform -chdir=iac/clusters init
+make help
 ```
+
+### Create cluster
 
 ```shell
-terraform -chdir=iac/clusters plan
+ make start-local-cluster
 ```
+
+This will :
+
+- Create 3 VMs
+- Provision Kubernetes Cluster with kubeadm (1 Master,2 Workers)
+- Deploy:
+  - CRI: Containerd
+  - CNI: Cilium
+  - Ingress Controller: Nginx
+  - LB: MetalLB
+  - GitOps Operator: ArgoCD
+
+Then ArgoCD, will sync the applications described at [gitops](./gitops/) directory, and will deploy them.
+Currently, it will deploy `kube-prometheus-stack`
+
+If everything go according to the plan, you will have:
+
+- K8S Cluster with ArgoCD and kube-prometheus-stack up and running
+- LB accessible from local workstation
 
 ```shell
-terraform -chdir=iac/clusters apply -auto-approve
+kubectl  get ing --all-namespaces
+
+NAMESPACE               NAME                                 CLASS   HOSTS                           ADDRESS         PORTS   AGE
+argo-cd                 argo-cd-argocd-server                nginx   argocd.cluster.localnet         192.168.51.20   80      77m
+kube-prometheus-stack   kube-prometheus-stack-alertmanager   nginx   alertmanager.cluster.localnet   192.168.51.20   80      74m
+kube-prometheus-stack   kube-prometheus-stack-grafana        nginx   grafana.cluster.localnet        192.168.51.20   80      74m
+kube-prometheus-stack   kube-prometheus-stack-prometheus     nginx   prometheus.cluster.localnet     192.168.51.20   80      74m
 ```
 
-Get ingresses
+## Local Domain Resolver
 
+### Manual with /etc/hosts
+
+The more convenient way, but for every new ingress needs update.
 ```shell
-kubectl get ing --all-namespaces
+sudo echo "192.168.51.20 alertmanager.cluster.localnet grafana.cluster.localnet prometheus.cluster.localnet  argocd.cluster.localnet" >> /etc/hosts
 ```
 
-```shell
-NAMESPACE               NAME                                 CLASS   HOSTS                           ADDRESS     PORTS   AGE
-kube-prometheus-stack   kube-prometheus-stack-alertmanager   nginx   alertmanager.cluster.localnet   localhost   80      3h22m
-kube-prometheus-stack   kube-prometheus-stack-grafana        nginx   grafana.cluster.localnet        localhost   80      3h22m
-kube-prometheus-stack   kube-prometheus-stack-prometheus     nginx   prometheus.cluster.localnet     localhost   80      3h22m
-```
+### Automated with dnsmasq
 
-## Troubleshooting
-
-### Networking
-
-```shell
-nc -v 127.0.0.1 80
-
-ubuntu@primary:~$ echo "test-test" > index.html && while true ; do sudo nc -l 80 < index.html ; done
-```
-
-### dnmasq
-
-```shell
-sudo launchctl unload /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
-sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
-dscacheutil -flushcache
-```
-
-### Multipass
-
-```shell
-sudo launchctl unload /Library/LaunchDaemons/com.canonical.multipassd.plist
-sudo launchctl load /Library/LaunchDaemons/com.canonical.multipassd.plist
-```
+TBD
+Act as a locan DNS resolver for the domain `cluster.localnet`. Every new host of this domain, will be automatically resolved from the workstation.

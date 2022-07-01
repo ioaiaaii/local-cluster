@@ -1,0 +1,76 @@
+
+
+  - block:
+    - name: Check if installation is already done
+      stat:
+        path: "/etc/kubernetes/pki/ca.key"
+      register: kubeadm_ca_key
+
+    - name: Init cluster if needed
+      include_tasks: kubeadm-init.yaml
+      when: not kubeadm_ca_key.stat.exists
+      register: cluster_ready
+
+  # Setup kubeconfig file for admin
+    - name: Setup kubeconfig for admin user
+      command: "{{ item }}"
+      when: not kubeadm_ca_key.stat.exists
+      with_items:
+      - mkdir -p /home/admin/.kube
+      - cp -f /etc/kubernetes/admin.conf /home/admin/.kube/config
+      - chown admin:admin /home/admin/.kube/config
+
+  # Setup kubeconfig file for admin
+    - name: Setup kubeconfig for admin user
+      command: "{{ item }}"
+      with_items:
+      - mkdir -p /root/.kube
+      - cp -f /etc/kubernetes/admin.conf /root/.kube/config
+
+    - name: Extract the certificate-key token
+      when: not kubeadm_ca_key.stat.exists
+      command: "kubeadm certs certificate-key"
+      register: certificate_token
+
+    - name: Initialize the upload certs
+      when: not kubeadm_ca_key.stat.exists
+      command: "kubeadm init phase upload-certs --upload-certs --certificate-key={{ certificate_token.stdout }}"
+      register: upload_certs
+
+    - name: Extract the controllers join command
+      when: not kubeadm_ca_key.stat.exists
+      command: "kubeadm token create --print-join-command --certificate-key {{ certificate_token.stdout }}"
+      register: controller_command
+
+    - name: Extract the minions join command
+      when: not kubeadm_ca_key.stat.exists
+      command: "kubeadm token create --print-join-command"
+      register: join_command
+
+    - name: Save kubeadm join command for cluster
+      when: not kubeadm_ca_key.stat.exists
+      local_action: copy content={{ join_command.stdout_lines | last | trim }} dest="/tmp/join-command-nodes"
+
+    - name: Save kubeadm join command for controllers
+      when: not kubeadm_ca_key.stat.exists
+      local_action: copy content={{ controller_command.stdout_lines | last | trim }} dest="/tmp/join-command-master"
+
+    - name: Copy minions join command to local file
+      when: not kubeadm_ca_key.stat.exists
+      copy:
+        src: "/tmp/join-command-nodes"
+        dest: "/tmp/join-command-nodes"
+        owner: 1000
+        group: 1000
+        mode: '0644'
+
+    - name: Copy controllers join command to local file
+      when: not kubeadm_ca_key.stat.exists
+      copy:
+        src: "/tmp/join-command-master"
+        dest: "/tmp/join-command-master"
+        owner: 1000
+        group: 1000
+        mode: '0644'
+
+    when: "'master-01' in inventory_hostname"

@@ -1,0 +1,14 @@
+- name: helm
+  include_tasks: helm.yaml
+
+- name: Install CNI
+  include_tasks: CNI.yaml
+
+- name: Install MetaLB
+  include_tasks: LB.yaml
+
+- name: Install NGINX Ingress
+  include_tasks: Ingress.yaml
+
+- name: Install Argo-CD
+  include_tasks: Argo.yaml
