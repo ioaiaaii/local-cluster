@@ -1,0 +1,36 @@
+harbor:
+  expose:
+    type: ingress
+    ingress:
+      hosts:
+        core: harbor.cluster.localnet
+        notary: notary.cluster.localnet
+      className: "nginx"
+
+  externalURL: https://harbor.cluster.localnet
+
+  internalTLS:
+    enabled: false
+
+  harborAdminPassword: "Harbor12345"
+
+  chartmuseum:
+    enabled: false
+
+  trivy:
+    enabled: false
+
+  notary:
+    enabled: false
+
+  metrics:
+    enabled: false
+
+  trace:
+    enabled: false
+
+  cache:
+    enabled: false
+
+  persistence:
+    enabled: false

@@ -86,9 +86,10 @@ This project requires the following softwares:
 
 ```shell
 brew install --cask vagrant
-brew install --cask virtualbox
 brew install ansible
 ```
+
+[VirtualBox Installer](https://www.virtualbox.org/wiki/Downloads)
 
 ## Usage
 
@@ -116,9 +117,8 @@ This will :
   - GitOps Operator: ArgoCD
 
 Then ArgoCD, will sync the applications described at [gitops](./gitops/) directory, and will deploy them.
-Currently, it will deploy `kube-prometheus-stack`
 
-If everything go according to the plan, you will have:
+If everything goes according to the plan, you will have:
 
 - K8S Cluster with ArgoCD and kube-prometheus-stack up and running
 - LB accessible from local workstation
@@ -126,23 +126,45 @@ If everything go according to the plan, you will have:
 ```shell
 kubectl  get ing --all-namespaces
 
-NAMESPACE               NAME                                 CLASS   HOSTS                           ADDRESS         PORTS   AGE
-argo-cd                 argo-cd-argocd-server                nginx   argocd.cluster.localnet         192.168.51.20   80      77m
-kube-prometheus-stack   kube-prometheus-stack-alertmanager   nginx   alertmanager.cluster.localnet   192.168.51.20   80      74m
-kube-prometheus-stack   kube-prometheus-stack-grafana        nginx   grafana.cluster.localnet        192.168.51.20   80      74m
-kube-prometheus-stack   kube-prometheus-stack-prometheus     nginx   prometheus.cluster.localnet     192.168.51.20   80      74m
+NAMESPACE               NAME                                 CLASS   HOSTS                           ADDRESS         PORTS     AGE
+argo-cd                 argo-cd-argocd-server                nginx   argocd.cluster.localnet         192.168.51.20   80        3h44m
+harbor                  harbor-ingress                       nginx   harbor.cluster.localnet         192.168.51.20   80, 443   5m46s
+kube-prometheus-stack   kube-prometheus-stack-alertmanager   nginx   alertmanager.cluster.localnet   192.168.51.20   80        3h41m
+kube-prometheus-stack   kube-prometheus-stack-grafana        nginx   grafana.cluster.localnet        192.168.51.20   80        3h41m
+kube-prometheus-stack   kube-prometheus-stack-prometheus     nginx   prometheus.cluster.localnet     192.168.51.20   80        3h41m
 ```
 
 ## Local Domain Resolver
 
-### Manual with /etc/hosts
+Act as a local DNS resolver for the domain `cluster.localnet`. Every new host of this domain, will be automatically resolved from the workstation, to the defined LB IP form MetalLB.
 
-The more convenient way, but for every new ingress needs update.
+Install dnsmasq
+
 ```shell
-sudo echo "192.168.51.20 alertmanager.cluster.localnet grafana.cluster.localnet prometheus.cluster.localnet  argocd.cluster.localnet" >> /etc/hosts
+brew install dnsmasq
 ```
 
-### Automated with dnsmasq
+Create the record for new zone
 
-TBD
-Act as a locan DNS resolver for the domain `cluster.localnet`. Every new host of this domain, will be automatically resolved from the workstation.
+```shell
+cat <<EOF | sudo tee -a /usr/local/etc/dnsmasq.conf
+address=/.cluster.localnet/192.168.51.20
+port=53
+EOF
+```
+
+Create a local DNS resolver for the new zone
+
+```shell
+cat <<EOF | sudo tee /etc/resolver/cluster.localnet
+domain cluster.localnet
+search cluster.localnet
+nameserver 127.0.0.1
+EOF
+```
+
+Start service as root
+
+```shell
+sudo brew services restart dnsmasq
+```

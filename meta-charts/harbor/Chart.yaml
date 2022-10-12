@@ -1,0 +1,10 @@
+apiVersion: v2
+name: harbor
+type: application
+#harbor version
+appVersion: 2.6.0
+version: 1.0.0
+dependencies:
+  - name: harbor
+    version: "1.10.0"
+    repository: https://helm.goharbor.io
