@@ -5,7 +5,7 @@ VAGRANTFILE_API_VERSION = "2"
 #Cluster
 cluster = {
   "master" => { :count => 1, :cpus => 2, :mem => 2048 },
-  "worker" => { :count => 2, :cpus => 5, :mem => 3096 }
+  "worker" => { :count => 2, :cpus => 5, :mem => 2048 }
 }
 
 #OS
