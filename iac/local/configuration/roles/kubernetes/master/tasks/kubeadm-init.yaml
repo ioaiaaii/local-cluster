@@ -1,8 +1,3 @@
-- name: Check if installation is already done
-  stat:
-    path: "/etc/kubernetes/pki/ca.key"
-  register: kubeadm_ca_key
-
 #https://github.com/containerd/containerd/issues/4581
 - name: Reset Containerd Config
   file:
@@ -35,7 +30,7 @@
                  --skip-phases=addon/kube-proxy              
   register: init_cluster
   
-- name: containerd patch
+- name: Containerd patch
   shell: |
     containerd config default > /etc/containerd/config.toml && \
     sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml && \
@@ -49,3 +44,4 @@
     connect_timeout: 3
     delay: 10
     timeout: 400
+  when: init_cluster is succeeded

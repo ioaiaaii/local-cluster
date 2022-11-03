@@ -81,11 +81,12 @@ This project requires the following softwares:
 - [VirtualBox](https://www.virtualbox.org)
 - [Vagrant](https://www.vagrantup.com)
 - [Ansible](https://www.ansible.com)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
 ### Quick install for OSX
 
 ```shell
-brew install virtualbox vagrant ansible
+brew install virtualbox vagrant ansible kubectl
 ```
 
 ## Usage
@@ -154,8 +155,47 @@ If everything goes according to the plan, you will have:
 - K8S Cluster with ArgoCD and kube-prometheus-stack up and running
 - LB accessible from local workstation
 
+### Local kubeconfig
+
+In order to protect your kubeconfig file, this action has to be done manually.
+After cluster provision, a new file created `/tmp/kube-master-01`, and
+it contains the kubeconfig from our cluster.
+
+Backup your kubeconfig and merge the new one:
+
 ```shell
-kubectl  get ing --all-namespaces
+kubectl config unset contexts.kubernetes-admin@kubernetes || true && \
+kubectl config unset clusters.kubernetes || true && \
+cp $HOME/.kube/config $HOME/.kube/config.backup.$(date +%Y-%m-%d.%H:%M:%S) && \
+KUBECONFIG=$HOME/.kube/config:/tmp/kube-master-01 kubectl config view --merge --flatten > $HOME/.kube/merged_kubeconfig && mv $HOME/.kube/merged_kubeconfig $HOME/.kube/config && echo "Kubeconfig updated..."
+```
+
+Get the contexts:
+
+```shell
+kubectl config get-contexts
+```
+
+```shell
+
+CURRENT   NAME                          CLUSTER           AUTHINFO                                      NAMESPACE
+          kubernetes-admin@kubernetes   kubernetes        kubernetes-admin
+```
+
+Use the new context:
+
+```shell
+kubectl config use-context kubernetes-admin@kubernetes
+```
+
+```shell
+Switched to context "kubernetes-admin@kubernetes".
+```
+
+Interact with the cluster to get the deployed ingresses:
+
+```shell
+kubectls get ing --all-namespaces
 
 NAMESPACE               NAME                                 CLASS   HOSTS                           ADDRESS         PORTS     AGE
 argo-cd                 argo-cd-argocd-server                nginx   argocd.cluster.localnet         192.168.51.20   80        3h44m
@@ -165,7 +205,7 @@ kube-prometheus-stack   kube-prometheus-stack-grafana        nginx   grafana.clu
 kube-prometheus-stack   kube-prometheus-stack-prometheus     nginx   prometheus.cluster.localnet     192.168.51.20   80        3h41m
 ```
 
-## Local Domain Resolver
+### Local Domain Resolver
 
 Act as a local DNS resolver for the domain `cluster.localnet`. Every new host of this domain, will be automatically resolved from the workstation, to the defined LB IP form MetalLB.
 
