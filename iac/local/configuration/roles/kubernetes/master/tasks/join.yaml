@@ -1,0 +1,33 @@
+- name: Reset Containerd Config
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+  - /etc/containerd/config.toml
+  register: reset_containerd
+
+- name: restart containerd
+  service:
+    name: containerd
+    state: restarted
+  register: restart_containerd
+
+- name: Reset Kubernetes Component
+  when: restart_containerd is succeeded
+  shell: "kubeadm reset --force"
+  register: reset_cluster
+
+# Join the cluster with join command
+- name: Copy the join command to server location
+  copy: src="/tmp/join-command-master" dest=/tmp/join-command.sh mode=0777
+
+- name: Join the node to cluster
+  when: restart_containerd is succeeded
+  command: sh /tmp/join-command.sh
+
+- name: containerd patch
+  shell: |
+    containerd config default > /etc/containerd/config.toml && \
+    sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml && \
+    service containerd restart && \
+    service kubelet restart

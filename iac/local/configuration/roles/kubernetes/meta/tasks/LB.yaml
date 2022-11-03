@@ -11,10 +11,9 @@
     create_namespace: yes
     release_namespace: metal-lb
     update_repo_cache: true
-
-- name: Pause for 5 minutes to build app MetalLB
-  ansible.builtin.pause:
-    minutes: 5
+    wait: true
+    #timeout to ensure that admission webhooks are up for the next step
+    timeout: "10m"
 
 - name: Upgrade MetalLB
   kubernetes.core.helm:
@@ -24,4 +23,4 @@
     create_namespace: yes
     release_namespace: metal-lb
     release_values: "{{ metallb_helm_values }}"
-
+    wait: true

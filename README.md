@@ -85,11 +85,8 @@ This project requires the following softwares:
 ### Quick install for OSX
 
 ```shell
-brew install --cask vagrant
-brew install ansible
+brew install virtualbox vagrant ansible
 ```
-
-[VirtualBox Installer](https://www.virtualbox.org/wiki/Downloads)
 
 ## Usage
 
@@ -97,6 +94,40 @@ brew install ansible
 
 ```shell
 make help
+```
+
+```shell
+destroy-local-cluster          : Destroy local cluster
+reload-local-cluster           : Reload/Upgrade local cluster
+restart-local-cluster          : Restart local cluster
+start-local-cluster            : Start local cluster
+status-local-cluster           : Get the status of local cluster
+suspend-local-cluster          : Suspend status of local cluster
+```
+
+### Configuration
+
+The main configuration for the local cluster is the [Vagrantfile](./iac/local/provision/vagrantfile).
+
+```ruby
+#Cluster
+CLUSTER = {
+  "master" => { :count => 1, :cpus => 2, :mem => 2048, :groups => "masters" },
+  "worker" => { :count => 2, :cpus => 5, :mem => 2048, :groups => "workers" }
+}
+
+#OS
+IMAGE_NAME = "bento/ubuntu"
+IMAGE_TAG = "22.04"
+IMAGE = IMAGE_NAME + "-" + IMAGE_TAG
+
+#Network
+SUBNET="192.168.51."
+DOMAIN_NAME="cluster.localnet"
+METALLB="192.168.51.20"
+
+#Kubernetes
+KUBERNETES_VERSION="1.24.0"
 ```
 
 ### Create cluster

@@ -13,3 +13,4 @@
     release_values: "{{ ingress_nginx_helm_values }}"
     update_repo_cache: true
     wait: true
+    timeout: "10m"

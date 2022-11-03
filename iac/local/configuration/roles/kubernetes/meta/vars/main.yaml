@@ -53,7 +53,7 @@ metallb_helm_values:
       namespace: metal-lb
     spec:
       addresses:
-      - 192.168.51.20/32
+      - {{ metallb_pool }}
   - |
     apiVersion: metallb.io/v1beta1
     kind: L2Advertisement
@@ -96,7 +96,7 @@ argo_cd_helm_values:
       enabled: true
       ingressClassName: nginx
       hosts:
-        - argocd.cluster.localnet
+        - argocd.{{ domain_name }}
 
 argocd_apps_helm_values:
   applications:

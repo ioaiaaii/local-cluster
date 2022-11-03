@@ -13,6 +13,7 @@
     release_values: "{{ argo_cd_helm_values }}"
     update_repo_cache: true
     wait: true
+    timeout: "10m"
 
 - name: Install ArgoCD-Applications
   kubernetes.core.helm:
@@ -22,3 +23,5 @@
     release_namespace: argo-cd
     release_values: "{{ argocd_apps_helm_values }}"
     wait: true
+    timeout: "10m"
+

@@ -1,4 +1,4 @@
-kubernetes_version: "1.24.0"
+kubernetes_version: ''
 kubernetes_packages_suffix: "00"
 kubernetes_package_version: "{{ kubernetes_version }}-{{ kubernetes_packages_suffix }}"
 kubernetes_packages:
@@ -8,5 +8,3 @@ kubernetes_packages:
 network_plugin: cilium
 container_runtime_engine: 'crio'
 domain_name: ''
-
-

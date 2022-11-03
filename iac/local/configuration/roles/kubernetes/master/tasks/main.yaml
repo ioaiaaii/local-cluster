@@ -1,5 +1,3 @@
-
-
   - block:
     - name: Check if installation is already done
       stat:
@@ -20,7 +18,7 @@
       - cp -f /etc/kubernetes/admin.conf /home/admin/.kube/config
       - chown admin:admin /home/admin/.kube/config
 
-  # Setup kubeconfig file for admin
+  # Setup kubeconfig file for root
     - name: Setup kubeconfig for admin user
       command: "{{ item }}"
       with_items:
@@ -74,3 +72,15 @@
         mode: '0644'
 
     when: "'master-01' in inventory_hostname"
+
+  - block:
+    - name: Check if Controller already joined
+      stat:
+        path: "/etc/kubernetes/pki/ca.key"
+      register: kubeadm_controller_ca_key
+
+    - name: Init cluster if needed
+      include_tasks: join.yaml
+      when: not kubeadm_controller_ca_key.stat.exists
+      register: controller_ready
+    when: "'master-01' not in inventory_hostname"
