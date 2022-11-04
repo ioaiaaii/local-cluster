@@ -155,7 +155,7 @@ If you don't want to install ArgoCD and the applications at [gitops](./gitops/),
 Actually, you can parse any Ansible flag you want.
 
 ```shell
-make start-local-cluster ARGS='--skip-tags="gitOps"'
+make start-local-cluster ARGS='--skip-tags=gitOps'
 ```
 
 If everything goes according to the plan, you will have:
@@ -164,6 +164,62 @@ If everything goes according to the plan, you will have:
 - LB accessible from local workstation
 - Process will take up to 20m aprox.
 
+### Update cluster
+
+If you want to update Ansible tasks, you can parse args and run `run-local-cluster`:
+e.g.
+
+```shell
+ make run-local-cluster ARGS='--skip-tags=gitOps --tags=master'
+```
+
+To list the tags/tasks run (as in Ansible):
+
+```shell
+make run-local-cluster ARGS='--list-tasks'
+```
+
+```yaml
+playbook: ../configuration/kubernetes-deployment.yaml
+
+  play #1 (all): Init Kubernetes Nodes	TAGS: []
+    tasks:
+      kubernetes/common : Disable swap	TAGS: [common]
+      kubernetes/common : Create admin	TAGS: [common]
+      kubernetes/common : Update /etc/hosts	TAGS: [common]
+      kubernetes/common : Kernel Patches	TAGS: [common]
+      kubernetes/common : Install Docker/Containerd Bins	TAGS: [common]
+      kubernetes/common : Install Kubernetes Bins	TAGS: [common]
+
+  play #2 (masters): Prepare Kubernetes Master Nodes	TAGS: []
+    tasks:
+      kubernetes/master : Check if installation is already done	TAGS: [master]
+      kubernetes/master : Init cluster if needed	TAGS: [master]
+      kubernetes/master : Setup kubeconfig for root user	TAGS: [master]
+      kubernetes/master : Create {{ cluster_user }}	TAGS: [master]
+      kubernetes/master : Extract the certificate-key token	TAGS: [master]
+      kubernetes/master : Initialize the upload certs	TAGS: [master]
+      kubernetes/master : Extract the controllers join command	TAGS: [master]
+      kubernetes/master : Extract the minions join command	TAGS: [master]
+      kubernetes/master : Save kubeadm join command for cluster	TAGS: [master]
+      kubernetes/master : Save kubeadm join command for controllers	TAGS: [master]
+      kubernetes/master : Copy minions join command to local file	TAGS: [master]
+      kubernetes/master : Copy controllers join command to local file	TAGS: [master]
+      kubernetes/master : Join Master node	TAGS: [master]
+
+  play #3 (workers): Prepare Kubernetes Worker Nodes	TAGS: []
+    tasks:
+      kubernetes/worker : Check if installation is already done	TAGS: [worker]
+      kubernetes/worker : Join worker	TAGS: [worker]
+
+  play #4 (masters): Finilize Cluster with CNI,LB,Ingress and GitOps	TAGS: []
+    tasks:
+      kubernetes/meta : helm	TAGS: [master]
+      kubernetes/meta : Install CNI	TAGS: [master]
+      kubernetes/meta : Install MetaLB	TAGS: [master]
+      kubernetes/meta : Install NGINX Ingress	TAGS: [master]
+      kubernetes/meta : Install Argo-CD	TAGS: [gitOps, master]
+```
 ### Local kubeconfig
 
 In order to protect your kubeconfig file, this action has to be done manually.
