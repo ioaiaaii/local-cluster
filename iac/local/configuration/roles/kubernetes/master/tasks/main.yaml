@@ -8,24 +8,14 @@
     - name: Init cluster if needed
       include_tasks: kubeadm-init.yaml
 
-    - name: Setup kubeconfig for admin user
-      command: "{{ item }}"
-      with_items:
-      - mkdir -p /home/admin/.kube
-      - cp -f /etc/kubernetes/admin.conf /home/admin/.kube/config
-      - chown admin:admin /home/admin/.kube/config
-
-    - name: Setup kubeconfig for admin user
+    - name: Setup kubeconfig for root user
       command: "{{ item }}"
       with_items:
       - mkdir -p /root/.kube
       - cp -f /etc/kubernetes/admin.conf /root/.kube/config
 
-    - name: Save kubeconfig locally
-      fetch:
-        src: /etc/kubernetes/admin.conf
-        dest: /tmp/kube-{{ inventory_hostname }}
-        flat: yes
+    - name: Create {{ cluster_user }}
+      include_tasks: create-user.yaml
 
     - name: Extract the certificate-key token
       command: "kubeadm certs certificate-key"
@@ -65,10 +55,14 @@
         group: 1000
         mode: '0644'
 
-    when: ("'master-01' in inventory_hostname") and (not kubeadm_ca_key.stat.exists)
+    when:
+      - "'master-01' in inventory_hostname"
+      - not kubeadm_ca_key.stat.exists
 
   - block:
     - name: Join Master node
       include_tasks: join.yaml
       register: controller_ready
-    when: ("'master-01' not in inventory_hostname") and (not kubeadm_ca_key.stat.exists)
+    when:
+      - "'master-01' not in inventory_hostname"
+      - not kubeadm_ca_key.stat.exists

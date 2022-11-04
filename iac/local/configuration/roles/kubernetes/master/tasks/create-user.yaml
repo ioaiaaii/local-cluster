@@ -1,0 +1,85 @@
+- name: Ensure openssl is installed
+  package:
+    name: openssl
+    state: present
+
+- name: Create private key for {{ cluster_user }}
+  shell: |
+    openssl genrsa -out /tmp/{{ cluster_user }}.key 4096
+
+- name: Create signing request for {{ cluster_user }}
+  shell: |
+    openssl req -new -key /tmp/{{ cluster_user }}.key -out /tmp/{{ cluster_user }}.csr -subj "/CN={{ cluster_user }}/O=cluster:admin"
+
+- name: Get CertificateSigningRequest hash
+  shell: |
+    cat /tmp/{{ cluster_user }}.csr | base64 --wrap=0
+  register: csr_request_hash
+
+- name: Generate CertificateSigningRequest manifest
+  vars: 
+    csr_request: "{{ csr_request_hash.stdout_lines | last | trim }}"
+  blockinfile:
+    dest: /opt/{{ cluster_user }}-cert-sig-request.yaml
+    content: "{{ lookup('template', '../templates/cert-sing-request.j2') }}"
+    create: true
+    state: present
+
+- name: Issue signing request to {{ cluster_name }}
+  shell: |
+    kubectl delete csr {{ cluster_user }}-csr --ignore-not-found=true && \
+    kubectl apply -f /opt/{{ cluster_user }}-cert-sig-request.yaml
+
+- name: Approve signing request of {{ cluster_user }} on {{ cluster_name }}
+  shell: |
+    kubectl certificate approve {{ cluster_user }}-csr
+
+- name: Generate ClusterRoleBinding manifest
+  blockinfile:
+    dest: /opt/{{ cluster_user }}-cluster-role-binding.yaml
+    content: "{{ lookup('template', '../templates/cluster-role-binding.j2') }}"
+    create: true
+    state: present
+
+- name: Apply ClusterRoleBinding of {{ cluster_name }}
+  shell: |
+    kubectl apply -f /opt/{{ cluster_user }}-cluster-role-binding.yaml
+
+- name: Get Cluster CA Data hash
+  shell: |
+    kubectl config view --minify --raw --output 'jsonpath={..cluster.certificate-authority-data}'
+  register: ca_data_hash
+
+- name: Get client-certificate-data
+  shell: |
+    cat /tmp/{{ cluster_user }}.key | base64 --wrap=0
+  register: client_key_data_hash
+
+- name: Get client-key-data
+  shell: |
+    kubectl get csr {{ cluster_user }}-csr -o jsonpath='{.status.certificate}'
+  register: client_cert_data_hash
+
+- name: Generate Kubeconfig for {{ cluster_user }} on {{ cluster_name }}
+  vars: 
+    ca_data: "{{ ca_data_hash.stdout_lines | last | trim }}"
+    client_cert_data: "{{client_cert_data_hash.stdout_lines | last | trim }}"
+    client_key_data: "{{client_key_data_hash.stdout_lines | last | trim }}"
+  blockinfile:
+    dest: /opt/{{ cluster_user }}-kubeconfig
+    content: "{{ lookup('template', '../templates/kubeconfig.j2') }}"
+    create: true
+    state: present
+
+- name: Setup kubeconfig for admin user
+  command: "{{ item }}"
+  with_items:
+  - mkdir -p /home/admin/.kube
+  - cp -f /opt/{{ cluster_user }}-kubeconfig /home/admin/.kube/config
+  - chown -R admin:admin /home/admin/.kube
+
+- name: Save kubeconfig locally
+  fetch:
+    src: /opt/{{ cluster_user }}-kubeconfig
+    dest: /tmp/{{ cluster_user }}-kubeconfig
+    flat: yes

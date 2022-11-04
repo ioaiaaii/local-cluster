@@ -158,16 +158,29 @@ If everything goes according to the plan, you will have:
 ### Local kubeconfig
 
 In order to protect your kubeconfig file, this action has to be done manually.
-After cluster provision, a new file created `/tmp/kube-master-01`, and
+After cluster provision, a new file created `/tmp/local-user-kubeconfig`, and
 it contains the kubeconfig from our cluster.
 
-Backup your kubeconfig and merge the new one:
+Simply run `make local-kubeconf`
 
 ```shell
-kubectl config unset contexts.kubernetes-admin@kubernetes || true && \
-kubectl config unset clusters.kubernetes || true && \
+➜ make local-kubeconf
+
+Property "users.local-user" unset.
+Property "clusters.local-cluster" unset.
+Property "contexts.local-user@local-cluster" unset.
+Kubeconfig updated...
+Switched to context "local-user@local-cluster".
+```
+
+Or run manually the steps to backup your kubeconfig and merge the new one:
+
+```shell
+kubectl config unset users.local-user || true && \
+kubectl config unset clusters.local-cluster || true && \
+kubectl config unset contexts.local-user@local-cluster|| true && \
 cp $HOME/.kube/config $HOME/.kube/config.backup.$(date +%Y-%m-%d.%H:%M:%S) && \
-KUBECONFIG=$HOME/.kube/config:/tmp/kube-master-01 kubectl config view --merge --flatten > $HOME/.kube/merged_kubeconfig && mv $HOME/.kube/merged_kubeconfig $HOME/.kube/config && echo "Kubeconfig updated..."
+KUBECONFIG=$HOME/.kube/config:/tmp/local-user-kubeconfig kubectl config view --merge --flatten > $HOME/.kube/merged_kubeconfig && mv $HOME/.kube/merged_kubeconfig $HOME/.kube/config && echo "Kubeconfig updated..." && kubectl config use-context local-user@local-cluster
 ```
 
 Get the contexts:
@@ -177,19 +190,8 @@ kubectl config get-contexts
 ```
 
 ```shell
-
-CURRENT   NAME                          CLUSTER           AUTHINFO                                      NAMESPACE
-          kubernetes-admin@kubernetes   kubernetes        kubernetes-admin
-```
-
-Use the new context:
-
-```shell
-kubectl config use-context kubernetes-admin@kubernetes
-```
-
-```shell
-Switched to context "kubernetes-admin@kubernetes".
+CURRENT   NAME                             CLUSTER           AUTHINFO                                      NAMESPACE
+*         local-user@local-cluster         local-cluster     local-user
 ```
 
 Interact with the cluster to get the deployed ingresses:

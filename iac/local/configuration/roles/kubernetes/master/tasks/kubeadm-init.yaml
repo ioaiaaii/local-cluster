@@ -18,16 +18,19 @@
   shell: "kubeadm reset --force"
   register: reset_cluster
 
+- name: Update kubeadm config
+  blockinfile:
+    dest: /opt/kubeadm-config.yaml
+    content: "{{ lookup('template', '../templates/kubeadm-config.j2') }}"
+    create: true
+    state: present
+
 - name: Initialize the Kubernetes cluster using kubeadm
   when: reset_cluster is succeeded
   shell: |
-    kubeadm init --apiserver-advertise-address {{ apiserver_advertise_address }} \
-                 --apiserver-cert-extra-sans {{ apiserver_advertise_address }} \
-                 --kubernetes-version {{ kubernetes_version }} \
-                 --node-name {{ apiserver_hostname }} \
-                 --pod-network-cidr {{ pod_network_cidr }} \
-                 --cri-socket unix:///var/run/containerd/containerd.sock \  
-                 --skip-phases=addon/kube-proxy              
+    kubeadm init --node-name {{ apiserver_hostname }} \
+                 --skip-phases=addon/kube-proxy \
+                 --config /opt/kubeadm-config.yaml
   register: init_cluster
   
 - name: Containerd patch
@@ -45,3 +48,6 @@
     delay: 10
     timeout: 400
   when: init_cluster is succeeded
+
+
+

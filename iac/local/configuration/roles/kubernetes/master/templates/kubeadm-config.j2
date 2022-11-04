@@ -1,0 +1,21 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+nodeRegistration:
+  criSocket: unix:///run/containerd/containerd.sock
+localAPIEndpoint:
+  advertiseAddress: {{ apiserver_advertise_address }} 
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+certificatesDir: /etc/kubernetes/pki
+clusterName: {{ cluster_name }}
+kubernetesVersion: {{ kubernetes_version }}
+networking:
+  dnsDomain: {{ domain_name }}
+  podSubnet: {{ pod_network_cidr }}
+  serviceSubnet: 10.96.0.0/12
+apiServer:
+  certSANs:
+  - {{ apiserver_advertise_address }}
+  extraArgs:
+    authorization-mode: Node,RBAC

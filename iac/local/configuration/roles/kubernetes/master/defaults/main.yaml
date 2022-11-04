@@ -4,6 +4,9 @@ apiserver_hostname: "{{ apiserver_hostname }}"
 service_cidr: "10.96.0.0/12"
 pod_network_cidr: "10.217.0.0/16"
 kubernetes_version: ''
+cluster_name: 'local-cluster'
+domain_name: 'cluster.localnet'
+cluster_user: 'local-user'
 
 # Kubeadm
 kubeadm_opts: ""

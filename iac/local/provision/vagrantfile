@@ -20,6 +20,8 @@ METALLB="192.168.51.20"
 
 #Kubernetes
 KUBERNETES_VERSION="1.24.0"
+CLUSTER_NAME="local-cluster"
+CLUSTER_USER="local-user"
 
 #Ansible
 ANSIBLE_PLAYBOOK="../configuration/kubernetes-deployment.yaml"
@@ -31,7 +33,9 @@ groups = {
     "all:children" => ["masters", "workers"],
     "all:vars" => {"domain_name" => DOMAIN_NAME,
                    "metal_lb_ip" => METALLB,
-                   "kubernetes_version" => KUBERNETES_VERSION}
+                   "kubernetes_version" => KUBERNETES_VERSION,
+                   "cluster_name" => CLUSTER_NAME,
+                   "cluster_user" => CLUSTER_USER}
   }
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
