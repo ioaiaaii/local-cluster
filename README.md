@@ -99,9 +99,9 @@ make help
 
 ```shell
 destroy-local-cluster          : Destroy local cluster
-reload-local-cluster           : Reload/Upgrade local cluster
+reload-local-cluster           : Upgrade the configuration. If you want to parse Ansible args, as in start-local-cluster
 restart-local-cluster          : Restart local cluster
-start-local-cluster            : Start local cluster
+start-local-cluster            : Start local cluster. If you want to parse Ansible args, call it with ARG var. e.g. make start-local-cluster ARGS='--skip-tags="gitOps"'
 status-local-cluster           : Get the status of local cluster
 suspend-local-cluster          : Suspend status of local cluster
 ```
@@ -150,9 +150,17 @@ This will :
 
 Then ArgoCD, will sync the applications described at [gitops](./gitops/) directory, and will deploy them.
 
+
+If you don't want to install ArgoCD and the applications at [gitops](./gitops/), you can parse Ansible args to skip the gitOps tag.
+Actually, you can parse any Ansible flag you want.
+
+```shell
+make start-local-cluster ARGS='--skip-tags="gitOps"'
+```
+
 If everything goes according to the plan, you will have:
 
-- K8S Cluster with ArgoCD and kube-prometheus-stack up and running
+- A K8S Cluster
 - LB accessible from local workstation
 - Process will take up to 20m aprox.
 

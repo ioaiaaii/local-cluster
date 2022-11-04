@@ -22,7 +22,7 @@
   roles:
     - { role: kubernetes/worker, tags: worker }
 
-- name: Finilize Cluster with CNI,LB,Ingress and GitOpss
+- name: Finilize Cluster with CNI,LB,Ingress and GitOps
   hosts:
     - masters
   gather_facts: true

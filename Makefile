@@ -1,10 +1,13 @@
 IAC_LOCAL_PATH = "iac/local/provision/"
 
-start-local-cluster: ## Start local cluster
+
+ARGS ?=''
+
+start-local-cluster: ## Start local cluster. If you want to parse Ansible args, call it with ARG var. e.g. make start-local-cluster ARGS='--skip-tags="gitOps"'
 	@echo "Creatinig local cluster, this will take a while."
 	@echo "+++"
 	@echo ""
-	cd ${IAC_LOCAL_PATH} && vagrant up --provision
+	cd ${IAC_LOCAL_PATH} && ANSIBLE_ARGS=${ARGS} vagrant up --provision
 
 status-local-cluster: ## Get the status of local cluster
 	cd ${IAC_LOCAL_PATH} && vagrant status
@@ -12,14 +15,14 @@ status-local-cluster: ## Get the status of local cluster
 suspend-local-cluster: ## Suspend status of local cluster
 	cd ${IAC_LOCAL_PATH} && vagrant suspend
 
-reload-local-cluster: ## Reload/Upgrade local cluster
-	cd ${IAC_LOCAL_PATH} && vagrant reload --provision
+reload-local-cluster: ## Upgrade the VMs configuration or just restart cluster.
+	cd ${IAC_LOCAL_PATH} && vagrant reload
 
 destroy-local-cluster: ## Destroy local cluster
 	cd ${IAC_LOCAL_PATH} && vagrant destroy
 
-restart-local-cluster: ## Restart local cluster
-	cd ${IAC_LOCAL_PATH} && vagrant reload
+run-local-cluster: ## Run Ansible configuration runs/updates. Call it with ARG var, to parse Ansible args.(Similar with start-local-cluster)
+	cd ${IAC_LOCAL_PATH} && ANSIBLE_ARGS=${ARGS} vagrant up --provision
 
 local-kubeconf:
 	@kubectl config unset users.local-user || true && \

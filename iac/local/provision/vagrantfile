@@ -72,6 +72,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                         ansible.verbose = "v"
                         ansible.limit = "all"
                         ansible.groups = groups
+                        ansible.raw_arguments = Shellwords.shellsplit(ENV['ANSIBLE_ARGS']) if ENV['ANSIBLE_ARGS']
                     end
                 end
             end
