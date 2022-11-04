@@ -154,6 +154,7 @@ If everything goes according to the plan, you will have:
 
 - K8S Cluster with ArgoCD and kube-prometheus-stack up and running
 - LB accessible from local workstation
+- Process will take up to 20m aprox.
 
 ### Local kubeconfig
 
@@ -197,7 +198,7 @@ CURRENT   NAME                             CLUSTER           AUTHINFO           
 Interact with the cluster to get the deployed ingresses:
 
 ```shell
-kubectls get ing --all-namespaces
+kubectl get ing --all-namespaces
 
 NAMESPACE               NAME                                 CLASS   HOSTS                           ADDRESS         PORTS     AGE
 argo-cd                 argo-cd-argocd-server                nginx   argocd.cluster.localnet         192.168.51.20   80        3h44m

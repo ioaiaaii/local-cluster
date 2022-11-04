@@ -55,6 +55,9 @@
     cat /tmp/{{ cluster_user }}.key | base64 --wrap=0
   register: client_key_data_hash
 
+- pause:
+    minutes: 1
+
 - name: Get client-key-data
   shell: |
     kubectl get csr {{ cluster_user }}-csr -o jsonpath='{.status.certificate}'
